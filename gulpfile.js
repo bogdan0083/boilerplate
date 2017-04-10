@@ -1,18 +1,19 @@
 // generated on 2017-02-04 using generator-webapp 2.4.0
+
 const gulp = require('gulp');
 const gulpLoadPlugins = require('gulp-load-plugins');
 const browserSync = require('browser-sync').create();
 const del = require('del');
 const wiredep = require('wiredep').stream;
 const runSequence = require('run-sequence');
-
+const path = require('path');
 const $ = gulpLoadPlugins();
 const reload = browserSync.reload;
-
 const pug = require('gulp-pug');
 const mozjpeg = require('imagemin-mozjpeg');
 var dev = false;
 
+const svgSymbols = require('gulp-svg-symbols');
 
 gulp.task('templates', () => {
   return gulp.src('app/templates/*.pug')
@@ -31,7 +32,9 @@ gulp.task('styles', () => {
     .pipe($.sass.sync({
       outputStyle: 'expanded',
       precision: 10,
-      includePaths: ['.']
+      includePaths: [
+        path.join(__dirname, 'node_modules')
+      ]
     }).on('error', $.sass.logError))
     .pipe($.autoprefixer({browsers: ['> 5%', 'last 2 versions', 'Firefox ESR']}))
     .pipe($.if(dev, $.sourcemaps.write()))
@@ -63,10 +66,20 @@ function lint(files) {
     .pipe($.if(!browserSync.active, $.eslint.failAfterError()));
 }
 
+gulp.task('svg-sprite', () => {
+  return gulp.src('app/images/svg/*.svg')
+    .pipe( svgSymbols({
+      templates: [
+        ['default-svg']
+      ]
+    }) )
+    .pipe( gulp.dest('app/images/') );
+});
 gulp.task('lint', () => {
-  return lint('app/scripts/**/*.js')
+  return lint('app/scripts/*.js')
     .pipe(gulp.dest('app/scripts'));
 });
+
 gulp.task('lint:test', () => {
   return lint('test/spec/**/*.js')
     .pipe(gulp.dest('test/spec'));
@@ -93,7 +106,10 @@ gulp.task('html', ['styles', 'scripts'], () => {
 gulp.task('images', () => {
   return gulp.src('app/images/**/*')
     .pipe($.imagemin(
-        [$.imagemin.gifsicle(), mozjpeg({ quality: 100 }), $.imagemin.optipng(), $.imagemin.svgo()],
+        [$.imagemin.gifsicle(),
+          mozjpeg({ quality: 100 }),
+          $.imagemin.optipng(),
+          $.imagemin.svgo()],
         { verbose: true }
       ))
     .pipe(gulp.dest('dist/images'));
@@ -183,7 +199,7 @@ gulp.task('wiredep', () => {
     .pipe(gulp.dest('app'));
 });
 
-gulp.task('build', ['lint', 'templates', 'html', 'images', 'styles-dist', 'fonts', 'extras'], () => {
+gulp.task('build', ['lint', 'templates', 'html', 'svg-sprite' ,'images', 'styles-dist', 'fonts', 'extras'], () => {
   return gulp.src('dist/**/*').pipe($.size({title: 'build', gzip: true}));
 });
 
