@@ -11,12 +11,34 @@ const $ = gulpLoadPlugins();
 const reload = browserSync.reload;
 const pug = require('gulp-pug');
 const mozjpeg = require('imagemin-mozjpeg');
+const changed = require('gulp-changed');
+
 var dev = false;
 
 const svgSymbols = require('gulp-svg-symbols');
 
-gulp.task('templates', () => {
-  return gulp.src('app/templates/*.pug')
+// Png Sprites
+const spritesmith = require('gulp.spritesmith');
+const merge = require('merge-stream');
+
+// postCss
+const postcss = require('gulp-postcss');
+const mqpacker = require('css-mqpacker');
+const autoprefixer = require('autoprefixer');
+
+// Postcss plugins
+const plugins = [
+  mqpacker({
+    sort: true
+  }),
+  autoprefixer({browsers: ['> 5%', 'last 2 versions', 'Firefox ESR']})
+]                                        
+                                         
+gulp.task('templates', () => {           
+  return gulp.src('app/templates/*.pug') 
+ .pipe( changed('app', {                 
+    extension: '.html'                   
+  }) )
   .pipe($.plumber())
   .pipe( pug({
     pretty: true
@@ -36,7 +58,7 @@ gulp.task('styles', () => {
         path.join(__dirname, 'node_modules')
       ]
     }).on('error', $.sass.logError))
-    .pipe($.autoprefixer({browsers: ['> 5%', 'last 2 versions', 'Firefox ESR']}))
+    .pipe(postcss( plugins ))
     .pipe($.if(dev, $.sourcemaps.write()))
     .pipe(gulp.dest('app/styles/'))
     // .pipe(gulp.dest('dist/styles/'))
@@ -75,6 +97,7 @@ gulp.task('svg-sprite', () => {
     }) )
     .pipe( gulp.dest('app/images/') );
 });
+
 gulp.task('lint', () => {
   return lint('app/scripts/*.js')
     .pipe(gulp.dest('app/scripts'));
@@ -121,6 +144,23 @@ gulp.task('fonts', () => {
     .pipe($.if(dev, gulp.dest('.tmp/fonts'), gulp.dest('dist/fonts')));
 });
 
+gulp.task('sprites', () => {
+    var spriteData = gulp.src('app/images/icons/*.png').pipe(spritesmith({
+        imgName: 'sprites.png',
+        cssName: 'sprites.sass',
+        imgPath: '../images/sprite/sprites.png',
+        padding: 5
+    }));
+
+    var imgStream = spriteData.img
+        .pipe(gulp.dest('app/images/sprite/'));
+
+    var cssStream = spriteData.css
+        .pipe(gulp.dest('app/sass/helpers/'));
+
+    return merge(imgStream, cssStream);
+})
+
 gulp.task('extras', () => {
   return gulp.src([
     'app/*',
@@ -153,7 +193,11 @@ gulp.task('serve', () => {
       '.tmp/fonts/**/*',
     ]).on('change', reload);
 
-    gulp.watch('app/templates/**/*.pug', ['templates']);
+    gulp.watch('app/templates/**/*.pug', ['templates'])
+    .on('change', (event) => {
+      console.log(event);
+    });
+
     gulp.watch('app/sass/**/*.sass', ['styles']);
     gulp.watch('app/scripts/**/*.js', ['scripts']);
     gulp.watch('app/fonts/**/*', ['fonts']);
@@ -199,7 +243,7 @@ gulp.task('wiredep', () => {
     .pipe(gulp.dest('app'));
 });
 
-gulp.task('build', ['lint', 'templates', 'html', 'svg-sprite' ,'images', 'styles-dist', 'fonts', 'extras'], () => {
+gulp.task('build', ['templates', 'html', 'svg-sprite' ,'images', 'sprites', 'styles-dist', 'fonts', 'extras'], () => {
   return gulp.src('dist/**/*').pipe($.size({title: 'build', gzip: true}));
 });
 
