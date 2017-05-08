@@ -4,6 +4,3 @@
 ```
 npm install
 ```
-```
-bower install
-```
