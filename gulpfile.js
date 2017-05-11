@@ -26,25 +26,33 @@ const postcss = require('gulp-postcss');
 const mqpacker = require('css-mqpacker');
 const autoprefixer = require('autoprefixer');
 
+// gulp-notify
+const notify = require("gulp-notify");
+
 // Postcss plugins
 const plugins = [
   mqpacker({
     sort: true
   }),
   autoprefixer({browsers: ['> 5%', 'last 2 versions', 'Firefox ESR']})
-]                                        
-                                         
-gulp.task('templates', () => {           
-  return gulp.src('app/templates/*.pug') 
- .pipe( changed('app', {                 
-    extension: '.html'                   
+];
+
+gulp.task('templates', () => {
+  return gulp.src('app/templates/*.pug')
+ .pipe( changed('app', {
+    extension: '.html'
   }) )
   .pipe($.plumber())
   .pipe( pug({
     pretty: true
   }) )
   .pipe(gulp.dest('app'))
-  .pipe(reload({stream: true}));
+  .pipe(reload({stream: true}))
+  .pipe(notify("Jade processed!"))
+  .on("error", notify.onError({
+    message: "Error: <%= error.message %>",
+    title: "Error running something"
+  }));
 });
 
 gulp.task('styles', () => {
@@ -57,12 +65,16 @@ gulp.task('styles', () => {
       includePaths: [
         path.join(__dirname, 'node_modules')
       ]
-    }).on('error', $.sass.logError))
+    }))
+    .on("error", notify.onError({
+      message: "Error: <%= error.message %>",
+      title: "Error running something"
+    }))
     .pipe(postcss( plugins ))
     .pipe($.if(dev, $.sourcemaps.write()))
     .pipe(gulp.dest('app/styles/'))
-    // .pipe(gulp.dest('dist/styles/'))
-    .pipe(reload({stream: true}));
+    .pipe(reload({stream: true}))
+    .pipe(notify("styles processed!"));
 });
 
 gulp.task('styles-dist', () => {
@@ -77,7 +89,11 @@ gulp.task('scripts', () => {
     .pipe($.babel())
     .pipe($.if(dev, $.sourcemaps.write('.')))
     .pipe(gulp.dest('dist/scripts'))
-    .pipe(reload({stream: true}));
+    .pipe(reload({stream: true}))
+    .on("error", notify.onError({
+      message: "Error: <%= error.message %>",
+      title: "Error running something"
+    }));
 });
 
 function lint(files) {
@@ -195,7 +211,6 @@ gulp.task('serve', () => {
 
     gulp.watch('app/templates/**/*.pug', ['templates'])
     .on('change', (event) => {
-      console.log(event);
     });
 
     gulp.watch('app/sass/**/*.sass', ['styles']);
