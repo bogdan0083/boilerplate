@@ -1,5 +1,12 @@
 'use strict';
 
 $(document).ready(function () {
-  console.log('hello');
+
+  function hello(world) {
+    console.log(world);
+  }
+
+  $('.some-selector').click(function () {
+    hello('world');
+  });
 });

@@ -29,6 +29,9 @@ const autoprefixer = require('autoprefixer');
 // gulp-notify
 const notify = require("gulp-notify");
 
+// gulp-html-prettify
+const prettify = require("gulp-html-prettify");
+
 // Postcss plugins
 const plugins = [
   mqpacker({
@@ -43,9 +46,8 @@ gulp.task('templates', () => {
     extension: '.html'
   }) )
   .pipe($.plumber())
-  .pipe( pug({
-    pretty: true
-  }) )
+  .pipe(pug())
+  .pipe(prettify())
   .pipe(gulp.dest('app'))
   .pipe(reload({stream: true}))
   .pipe(notify("Jade processed!"))
@@ -82,13 +84,13 @@ gulp.task('styles-dist', () => {
   .pipe(gulp.dest('dist/styles/'));
 });
 
+// TODO: fix issue when all files change on reload
 gulp.task('scripts', () => {
-  return gulp.src('app/scripts/**/*.js')
+  return gulp.src('app/scripts/*.js')
     .pipe($.plumber())
     .pipe($.if(dev, $.sourcemaps.init()))
-    .pipe($.babel())
     .pipe($.if(dev, $.sourcemaps.write('.')))
-    .pipe(gulp.dest('dist/scripts'))
+    .pipe(gulp.dest('app/scripts/'))
     .pipe(reload({stream: true}))
     .on("error", notify.onError({
       message: "Error: <%= error.message %>",
@@ -127,18 +129,6 @@ gulp.task('lint:test', () => {
 gulp.task('html', ['styles', 'scripts'], () => {
   return gulp.src('app/*.html')
     .pipe($.useref({searchPath: ['app', '.']}))
-    // .pipe($.if('/\.js$/', $.uglify({compress: {drop_console: true}})))
-    // .pipe($.if('/\.css$/b', $.cssnano({safe: true, autoprefixer: false})))
-    // .pipe($.if('/\.html$/', $.htmlmin({
-    //   collapseWhitespace: true,
-    //   minifyCSS: true,
-    //   minifyJS: {compress: {drop_console: true}},
-    //   processConditionalComments: true,
-    //   removeComments: true,
-    //   removeEmptyAttributes: true,
-    //   removeScriptTypeAttributes: true,
-    //   removeStyleLinkTypeAttributes: true
-    // })))
     .pipe(gulp.dest('dist'));
 });
 
@@ -252,9 +242,6 @@ gulp.task('serve:test', ['scripts'], () => {
 // inject bower components
 gulp.task('wiredep', () => {
   gulp.src('app/*.html')
-    .pipe(wiredep({
-      ignorePath: /^(\.\.\/)*\.\./
-    }))
     .pipe(gulp.dest('app'));
 });
 
